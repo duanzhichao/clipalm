@@ -7,3 +7,11 @@
 /release
 
 /platforms
+
+.DS_Store
+
+hitb.keystore
+
+release.sh
+
+yarn-error.log

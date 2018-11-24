@@ -1,21 +1,23 @@
 const state = {
-  activeTab: -1,
-  menu: 'MDC'
+  rule: [],
+  page: 1,
+  libraryMenu: '',
+  mdc: ''
 }
 
 const mutations = {
-  SET_activeTab (state, x) {
-    state.activeTab = x
+  SET_rule (state, x) {
+    state.rule = x
   },
-  SET_menu (state, x) {
-    state.menu = x
+  SET_libraryPage (state, x) {
+    state.page = x
   }
 }
 
 const actions = {
   someAsyncTask ({ commit }) {
-    commit('SET_activeTab')
-    commit('SET_menu')
+    commit('SET_rule')
+    commit('SET_libraryPage')
   }
 }
 

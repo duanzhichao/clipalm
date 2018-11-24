@@ -1,21 +1,26 @@
 const state = {
-  activeTab: -1,
-  menu: '机构'
+  statDrg: [],
+  chartType: '报表',
+  statPage: 1
 }
 
 const mutations = {
-  SET_activeTab (state, x) {
-    state.activeTab = x
+  SET_statDrg (state, x) {
+    state.statDrg = x
   },
-  SET_menu (state, x) {
-    state.menu = x
+  SET_chartType (state, x) {
+    state.chartType = x
+  },
+  SET_statPage (state, x) {
+    state.statPage = x
   }
 }
 
 const actions = {
   someAsyncTask ({ commit }) {
-    commit('SET_activeTab')
-    commit('SET_menu')
+    commit('SET_statDrg')
+    commit('SET_chartType')
+    commit('SET_statPage')
   }
 }
 

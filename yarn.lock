@@ -5976,7 +5976,7 @@ qs@6.5.1:
   version "6.5.1"
   resolved "http://registry.npm.taobao.org/qs/download/qs-6.5.1.tgz#349cdf6eef89ec45c12d7d5eb3fc0c870343a6d8"
 
-qs@6.5.2, qs@~6.5.2:
+qs@6.5.2, qs@^6.5.2, qs@~6.5.2:
   version "6.5.2"
   resolved "http://registry.npm.taobao.org/qs/download/qs-6.5.2.tgz#cb3ae806e8740444584ef154ce8ee98d403f3e36"
 
@@ -7552,6 +7552,16 @@ websocket-extensions@>=0.1.1:
 weex-bindingx@0.0.17:
   version "0.0.17"
   resolved "http://registry.npm.taobao.org/weex-bindingx/download/weex-bindingx-0.0.17.tgz#08986506c4ec998f8864f0c4635ba646c0911199"
+  dependencies:
+    bindingx-parser "0.x.x"
+    bindingx-web-polyfill "0.x.x"
+    object-assign "^4.1.1"
+    simple-lodash "^0.0.2"
+    universal-env "0.x.x"
+
+weex-bindingx@^0.0.48:
+  version "0.0.48"
+  resolved "http://registry.npm.taobao.org/weex-bindingx/download/weex-bindingx-0.0.48.tgz#f37a82c313c199026c013de834bc496128260e9b"
   dependencies:
     bindingx-parser "0.x.x"
     bindingx-web-polyfill "0.x.x"

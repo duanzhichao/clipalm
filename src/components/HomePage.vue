@@ -1,125 +1,252 @@
 <template>
-  <div class="wrapper">
-    <nav-bar></nav-bar>
-    <div class="panel">
-      <wxc-searchbar ref="wxc-searchbar"
-        input-type='text' autofocus=true
-        default-value='hitb' cancel-label='用户名'
-        @wxcSearchbarCancelClicked="NameOnCancel"
-        @wxcSearchbarInputReturned="NameOnReturn"
-        @wxcSearchbarInputOnInput="NameOnInput"
-        @wxcSearchbarCloseClicked="NameOnClose"
-        @wxcSearchbarInputOnFocus="NameOnFocus"
-        @wxcSearchbarInputOnBlur="NameOnBlur">
-      </wxc-searchbar>
-      <wxc-searchbar ref="wxc-searchbar"
-        input-type='password'
-        default-value='123456' cancel-label='密码'
-        @wxcSearchbarCancelClicked="PwdOnCancel"
-        @wxcSearchbarInputReturned="PwdOnReturn"
-        @wxcSearchbarInputOnInput="PwdOnInput"
-        @wxcSearchbarCloseClicked="PwdOnClose"
-        @wxcSearchbarInputOnFocus="PwdOnFocus"
-        @wxcSearchbarInputOnBlur="PwdOnBlur">
-      </wxc-searchbar>
-      <wxc-button text="用户登陆" @wxcButtonClicked="login"></wxc-button>
-      <text class="count">{{count}}</text>
-      <text class="value-text">{{value}}</text>
+<div class="homepage" v-if="showNewVersion">
+  <Version></Version>
+</div>
+<div class="homepage" v-bind:class="homepage" v-else>
+  <wxc-loading :show="isLoadingShow" type="default" interval="3" loading-text="正在查询"></wxc-loading>
+  <wxc-tab-bar
+    ref="wxc-tab-bar"
+    :tab-titles="tabs"
+    :tab-styles="tabStyles"
+    title-type="icon"
+    duration="10"
+    @wxcTabBarCurrentTabSelected="wxcTabBarCurrentTabSelected">
+    <!-- user页 -->
+    <div class="panel" v-bind:class="panel">
+      <Analyse v-if="infoLevel[0] > 0"></Analyse>
+      <Login v-else-if="menu[0] == '用户登录'"></Login>
+      <User v-if="menu[0] == '个人信息'"></User>
     </div>
-  </div>
+    <!-- edit页 -->
+    <div class="panel" v-bind:class="panel">
+      <PopRight v-if="infoLevel[1] > 0"></PopRight>
+      <HomeMenu v-else-if="menu[1] === '病案'"></HomeMenu>
+      <Introduce v-else-if="menu[1] === '介绍'"></Introduce>
+      <SingleGroup v-else-if="menu[1] == '单条分组'"></SingleGroup>
+      <Edit v-else></Edit>
+    </div>
+    <!-- library页 -->
+    <div class="panel" v-bind:class="panel">
+      <PopRight v-if="infoLevel[2] > 0"></PopRight>
+      <HomeMenu v-else-if="menu[2] === '字典'"></HomeMenu>
+      <Introduce v-else-if="menu[2] === '介绍'"></Introduce>
+      <Library v-else></Library>
+    </div>
+    <!-- stat页 -->
+    <div class="panel" v-bind:class="panel">
+      <PopRight v-if="infoLevel[3] > 0"></PopRight>
+      <HomeMenu v-else-if="menu[3] === 'DRG分析'"></HomeMenu>
+      <Introduce v-else-if="menu[3] === '介绍'"></Introduce>
+      <Charts v-else-if="menu[3] == '报表'"></Charts>
+      <Report v-else></Report>
+    </div>
+    <!-- forum页 -->
+    <div class="panel" v-bind:class="panel">
+      <ForumContent v-if="infoLevel[4] > 0"></ForumContent>
+      <HomeMenu v-else-if="menu[4] === '论坛'"></HomeMenu>
+      <Introduce v-else-if="menu[4] === '介绍'"></Introduce>
+      <!-- <New v-else-if="menu[4] === '新建帖子'"></New> -->
+      <!-- <ForumContent v-else-if="menu[4] === '帖子'"></ForumContent> -->
+      <Forum v-else></Forum>
+    </div>
+  </wxc-tab-bar>
+  <!-- <mini-bar></mini-bar> -->
+</div>
 </template>
 
 <script>
-import NavBar from './NavBar'
-import { WxcButton, WxcSearchbar } from 'weex-ui'
-const stream = weex.requireModule('stream')
-const modal = weex.requireModule('modal')
-
-export default {
-  name: 'home-page',
-  components: { NavBar, WxcButton, WxcSearchbar },
-  data () {
-    return {
-      count: '网络连接中...',
-      value: '输入框内容。。。'
-    }
-  },
-  methods: {
-    login () {
-      stream.fetch({
-        method: 'GET',
-        type: 'json',
-        url: 'https://api.github.com/repos/vuejs/vue'
-      }, res => {
-        if (res.ok) {
-          this.count = res.data.stargazers_count
-          this.count = '登陆成功'
+  import { WxcTabBar, Utils, WxcLoading } from 'weex-ui';
+  import { getServer, getLastVersion } from '../utils/server'
+  import Version from './common/Version'
+  import PopRight from './common/PopRight'
+  import HomeMenu from './common/HomeMenu'
+  import Introduce from './common/Introduce'
+  import Edit from './edit/Edit'
+  import SingleGroup from './edit/SingleGroup'
+  import ForumContent from './forum/ForumContent'
+  import Forum from './forum/Forum'
+  // import New from './forum/New'
+  import Library from './library/Library'
+  import Report from './stat/Report'
+  import Charts from './stat/Charts'
+  import Analyse from './user/Analyse'
+  import User from './user/User'
+  import Login from './user/Login'
+  import { userLogin } from '../utils/user'
+  const storage = weex.requireModule('storage')
+  const modal = weex.requireModule('modal')
+  export default {
+    components: { WxcTabBar, WxcLoading, User, Login, Edit, SingleGroup, Library,
+      Report, Forum, PopRight, ForumContent, Version, Charts, HomeMenu, Introduce, Analyse },
+    data: () => ({
+      tabs: [{
+        title: '用户',
+        menu:  [{'用户': ['用户登录', '个人信息']}],
+        icon: 'http://210.75.199.113/images/user.png',
+        activeIcon: 'http://210.75.199.113/images/user_fill.png'
+        }, {
+          title: '病案',
+          menu: [{'病案查询': [['未入组病历', 'QY病历', '低风险死亡病历'], ['费用异常病历']], '单条分组': [['单条分组']]}],
+          icon: 'http://210.75.199.113/images/edit.png',
+          activeIcon: 'http://210.75.199.113/images/edit_fill.png'
+        }, {
+          title: '字典',
+          menu: [{'DRG': [['CN-DRG', 'BJ-ICD10', 'BJ-ICD9'], ['GB-ICD10', 'GB-ICD9']], '疾病': [['疾病分类/诊断术语']], '手术': [['临床手术/操作术语']]}],
+          icon: 'http://210.75.199.113/images/library.png',
+          activeIcon: 'http://210.75.199.113/images/library_fill.png'
+        }, {
+          title: 'DRG分析',
+          menu: [{'DRG基础': [['DRG基础']], 'DRG专家': [['偏差分布', '主诊未入组', '手术QY']], 'DRG机构': [['年', '半年', '季度', '月']]}],
+          icon: 'http://210.75.199.113/images/stat.png',
+          activeIcon: 'http://210.75.199.113/images/stat_fill.png'
+        }, {
+          title: '论坛',
+          menu: [{'论坛版块': [['用户反馈', '病案讨论', '字典交流'], ['DRG分析', '论坛建议']], '帖子': [['我的帖子', '最新帖子']]}],
+          icon: 'http://210.75.199.113/images/forum.png',
+          activeIcon: 'http://210.75.199.113/images/forum_fill.png'
+        }],
+      tabStyles: {
+        bgColor: '#FFFFFF',
+        titleColor: '#666666',
+        activeTitleColor: '#3D3D3D',
+        activeBgColor: '#FFFFFF',
+        isActiveTitleBold: true,
+        iconWidth: 54,
+        iconHeight: 54,
+        width: 160,
+        height: 100,
+        fontSize: 24,
+        textPaddingLeft: 10,
+        textPaddingRight: 10
+      }
+    }),
+    computed: {
+      activeTab () {
+        return this.$store.state.Home.activeTab
+      },
+      user () {
+        return this.$store.state.Home.user
+      },
+      infoLevel () {
+        return this.$store.state.Home.infoLevel
+      },
+      menu () {
+        if (this.activeTab === 3) {
+          this.setPage(this.activeTab)
+        }
+        return this.$store.state.Home.menu
+      },
+      isLoadingShow () {
+        return this.$store.state.Home.isLoadingShow
+      },
+      showNewVersion () {
+        let show = false
+        if (this.$store.state.Home.version < this.$store.state.Home.serverVersion.version) {
+          show = true
+        }
+        return show
+      },
+      height () {
+        const { tabStyles } = this
+        const tabPageHeight = weex.config.env.deviceHeight
+        const height = (tabPageHeight - tabStyles.height) + 'px'
+        return height
+      },
+      homepage () {
+        const style = {
+          height: this.height,
+        }
+        return style
+      },
+      panel () {
+        const style = {
+          width: '750px',
+          height: this.height,
+        }
+        return style
+      }
+    },
+    created: function () {
+      this.newVersion()
+      storage.getItem('user', e => {
+        if (e.result === 'success') {
+          const edata = JSON.parse(e.data)
+          if (edata.username && edata.password) {
+            this.$store.commit('SET_menu_all', ['个人信息', '病案', '字典', 'DRG分析', '论坛'])
+            userLogin(this, edata)
+          } else {
+            this.$store.commit('SET_menu_all', ['用户登录', '介绍', '介绍', '介绍', '介绍'])
+          }
         } else {
-          this.count = '- unknown -'
+          this.$store.commit('SET_menu_all', ['用户登录', '介绍', '介绍', '介绍', '介绍'])
         }
       })
+      const tabPageHeight = Utils.env.getPageHeight();
+      // 如果页面没有导航栏，可以用下面这个计算高度的方法
+      // const tabPageHeight = env.deviceHeight / env.deviceWidth * 750;
+      const { tabStyles } = this
+      this.contentStyle = { height: (tabPageHeight - tabStyles.height) + 'px' }
     },
-    NameOnFocus () {
-      this.value = '用户名输入中。。。'
-      modal.toast({ 'message': 'onfocus', 'duration': 1 })
+    beforeMount: function () {
     },
-    NameOnBlur () {
-      modal.toast({ 'message': 'onbulr', 'duration': 1 })
+    mounted: function () {
+      this.wxcTabBarCurrentTabSelected({ page: 0 })
     },
-    NameOnClose () {
-      modal.toast({ 'message': 'close.click', 'duration': 1 })
-    },
-    NameOnInput (e) {
-      this.value = e.value
-    },
-    NameOnCancel () {
-      modal.toast({ 'message': 'cancel.click', 'duration': 1 })
-    },
-    NameOnReturn () {
-      modal.toast({ 'message': 'return.click', 'duration': 1 })
-    },
-
-    PwdOnFocus () {
-      this.value = '密码输入中。。。'
-      modal.toast({ 'message': 'onfocus', 'duration': 1 })
-    },
-    PwdOnBlur () {
-      modal.toast({ 'message': 'onbulr', 'duration': 1 })
-    },
-    PwdOnClose () {
-      modal.toast({ 'message': 'close.click', 'duration': 1 })
-    },
-    PwdOnInput (e) {
-      this.value = e.value
-    },
-    PwdOnCancel () {
-      modal.toast({ 'message': 'cancel.click', 'duration': 1 })
-    },
-    PwdOnReturn () {
-      modal.toast({ 'message': 'return.click', 'duration': 1 })
+    methods: {
+      newVersion () {
+        getLastVersion(this)
+      },
+      setPage (num) {
+        this.$refs['wxc-tab-bar'].setPage(num)
+      },
+      wxcTabBarCurrentTabSelected (e) {
+        const i = e.page
+        const menus = this.tabs[i].menu
+        const menu = this.$store.state.Home.menu[i]
+        const activeTab = this.$store.state.Home.activeTab
+        this.$store.commit('SET_activeTab', i)
+        this.$store.commit('SET_menus', menus)
+        this.$store.commit('SET_menu', [i, menu])
+        // 论坛
+        if (i === 4 && menu === '介绍') {
+          this.$store.commit('SET_menu', [i, menu])
+        } else if (i === 4) {
+          this.$store.commit('SET_menu', [i, menu])
+          this.$store.commit('SET_forumLabel', this.$store.state.Home.menu[activeTab])
+          // getServer(this, i, '帖子列表', { username: this.user.data.username })
+        }
+      }
     }
-  }
-}
+  };
 </script>
 
 <style scoped>
-  .wrapper {
-    /* flex-direction: column; */
-    justify-content: center;
+  .homepage {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: #cccccc;
   }
   .panel {
+    width: 750px;
+    background-color: #C6e2FF;
+    align-items: center;
     margin-left: 0px;
-    border-width: 2px;
-    border-style: solid;
     border-color: #BBBBBB;
-    padding-top: 15px;
-    padding-bottom: 15px;
+    padding-top: 0px;
+    padding-bottom: 0px;
     padding-left: 15px;
     padding-right: 15px;
-    margin-bottom: 30px;
+    margin-bottom: 0px;
   }
-  .text {
-    color: #666666;
-    font-size: 32px;
+  .item-container {
+    width: 750px;
+    align-items: center;
+    justify-content: center;
   }
 </style>
